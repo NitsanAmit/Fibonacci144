@@ -1,4 +1,5 @@
-import { Component, HostListener , OnInit } from '@angular/core';
+import {Component, ElementRef, HostListener, OnInit} from '@angular/core';
+import * as Hammer from 'hammerjs';
 
 @Component({
   selector: 'app-grid',
@@ -11,16 +12,24 @@ export class GridComponent implements OnInit {
   private readonly INITIAL_TILE_VALUE : number = 1;
   private readonly NEW_TILES_PER_ROUND = 1;
   private readonly LEFT : string = "Left";
+  private readonly LEFT_MOVEMENT_EVENT = "ArrowLeft";
   private readonly RIGHT : string = "Right";
+  private readonly RIGHT_MOVEMENT_EVENT = "ArrowRight";
   private readonly UP : string = "Up";
+  private readonly UP_MOVEMENT_EVENT = "ArrowUp";
   private readonly DOWN : string = "Down";
+  private readonly DOWN_MOVEMENT_EVENT = "ArrowDown";
   private readonly DIR_VECTORS = [{x: 1, y: 0}, {x: 0, y: 1}, {x: -1, y: 0}, {x: 0, y: -1}];
   cells: Cell[][];
   lastMove : string;
   gameOver: boolean;
 
-  constructor() {
+  constructor(private el: ElementRef) {
     this.initGrid();
+  }
+
+  ngAfterViewInit(): void {
+    this.initTouchSupport();
   }
 
   ngOnInit(): void {
@@ -39,6 +48,23 @@ export class GridComponent implements OnInit {
     this.addRandomTiles(2);
   }
 
+  private initTouchSupport() {
+    let hammer = new Hammer(this.el.nativeElement.parentElement);
+    hammer.get("swipe").set({ direction: Hammer.DIRECTION_ALL });
+    hammer.on("swipeleft", (eventObject) => {
+      this.moveTiles({key : this.LEFT_MOVEMENT_EVENT});
+    });
+    hammer.on("swiperight", (eventObject) => {
+      this.moveTiles({key : this.RIGHT_MOVEMENT_EVENT});
+    });
+    hammer.on("swipeup", (eventObject) => {
+      this.moveTiles({key : this.UP_MOVEMENT_EVENT});
+    });
+    hammer.on("swipedown", (eventObject) => {
+      this.moveTiles({key : this.DOWN_MOVEMENT_EVENT});
+    });
+  }
+
   getEmptyCells() {
     const emptyCells: Cell[] = [];
     for (let i: number = 0; i < 4; i++) {
@@ -50,7 +76,6 @@ export class GridComponent implements OnInit {
     }
     return emptyCells;
   }
-
 
   private addRandomTiles(numOfTiles: number) {
     const emptyCells = this.getEmptyCells();
@@ -70,32 +95,30 @@ export class GridComponent implements OnInit {
     }
   }
 
-
   private addTileAt(position: Cell) {
     this.cells[position.y][position.x].value = this.INITIAL_TILE_VALUE;
     this.cells[position.y][position.x].state = "new";
   }
 
 
-
   @HostListener("window:keydown", ['$event'])
-  moveTiles(event: KeyboardEvent) {
+  moveTiles(event: any) {
     const prevState = this.cells;
     let newState: Cell[][] = null;
     switch (event.key) {
-      case "ArrowLeft":
+      case this.LEFT_MOVEMENT_EVENT:
         this.lastMove = this.LEFT;
         newState = this.cells.map(row => this.moveRowLeft(row));
         break;
-      case "ArrowRight":
+      case this.RIGHT_MOVEMENT_EVENT:
         this.lastMove = this.RIGHT;
         newState = this.cells.map(row => this.moveRowRight(row));
         break;
-      case "ArrowUp":
+      case this.UP_MOVEMENT_EVENT:
         this.lastMove = this.UP;
         newState = this.moveColumnsUp();
         break;
-      case "ArrowDown":
+      case this.DOWN_MOVEMENT_EVENT:
         this.lastMove = this.DOWN;
         newState = this.moveColumnsDown();
         break;
