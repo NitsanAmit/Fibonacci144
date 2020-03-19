@@ -1,0 +1,8 @@
+  <div class="grid-table">
+    <app-game-over (onNewGame)="initGrid()" *ngIf="gameOver"></app-game-over>
+    <div *ngFor="let row of cells">
+        <app-cell *ngFor="let cell of row" value="{{cell.value}}" state="{{cell.state}}"></app-cell>
+    </div>
+  </div>
+  <h3 *ngIf="lastMove !== ''">{{lastMove}}</h3>
+  <h3 *ngIf="lastMove === ''">Make A Move</h3>

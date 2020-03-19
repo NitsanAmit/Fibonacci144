@@ -1,0 +1,14 @@
+.grid-table {
+  background: #324B4B;
+  width: 490px;
+  height: 490px;
+  margin: auto;
+  padding-top: 3px;
+}
+
+h3{
+  font: 700 26px 'Baloo Chettan 2', sans-serif;
+  color: #324B4B;
+  padding: 10px;
+}
+

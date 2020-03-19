@@ -1,0 +1,5 @@
+<div class="cell" >
+  <div class="tile" [style.background]="getBgColorForCellValue(value)" [class.tile-merged]="state == 'merged'" [class.tile-new]="state == 'new'">
+    {{value == 0 ? "" : value}}
+  </div>
+</div>
