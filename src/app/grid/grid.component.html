@@ -1,8 +1,10 @@
-  <div class="grid-table">
-    <app-game-over (onNewGame)="initGrid()" *ngIf="gameOver"></app-game-over>
+<p style="font-weight: 700;margin-top: -10px">Score: {{score}}</p>
+<div class="grid-table">
+    <app-layover (gamePaused)="onGamePaused($event)" state="{{gameState}}"></app-layover>
     <div *ngFor="let row of cells">
         <app-cell *ngFor="let cell of row" value="{{cell.value}}" state="{{cell.state}}"></app-cell>
     </div>
   </div>
-  <h3 *ngIf="lastMove !== ''">{{lastMove}}</h3>
-  <h3 *ngIf="lastMove === ''">Make A Move</h3>
+  <h3 *ngIf="lastMove !== ''; else MakeAMove">Last Move: <span style="font-weight: 400;"><br>{{lastMove}}</span></h3>
+  <ng-template #MakeAMove><h3 >Make A Move</h3></ng-template>
+  <br>

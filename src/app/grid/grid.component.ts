@@ -9,20 +9,10 @@ import * as Hammer from 'hammerjs';
 
 export class GridComponent implements OnInit {
 
-  private readonly INITIAL_TILE_VALUE : number = 1;
-  private readonly NEW_TILES_PER_ROUND = 1;
-  private readonly LEFT : string = "Left";
-  private readonly LEFT_MOVEMENT_EVENT = "ArrowLeft";
-  private readonly RIGHT : string = "Right";
-  private readonly RIGHT_MOVEMENT_EVENT = "ArrowRight";
-  private readonly UP : string = "Up";
-  private readonly UP_MOVEMENT_EVENT = "ArrowUp";
-  private readonly DOWN : string = "Down";
-  private readonly DOWN_MOVEMENT_EVENT = "ArrowDown";
-  private readonly DIR_VECTORS = [{x: 1, y: 0}, {x: 0, y: 1}, {x: -1, y: 0}, {x: 0, y: -1}];
   cells: Cell[][];
   lastMove : string;
-  gameOver: boolean;
+  score : number;
+  gameState : number; // 0 = ongoing, 1 = game-over, 2 = reached 144, 3 = past 144;
 
   constructor(private el: ElementRef) {
     this.initGrid();
@@ -36,7 +26,8 @@ export class GridComponent implements OnInit {
   }
 
   initGrid() {
-    this.gameOver = false;
+    this.gameState = 0;
+    this.score = 0;
     this.lastMove = "";
     this.cells = [];
     for (let i: number = 0; i < 4; i++) {
@@ -52,16 +43,16 @@ export class GridComponent implements OnInit {
     let hammer = new Hammer(this.el.nativeElement.parentElement);
     hammer.get("swipe").set({ direction: Hammer.DIRECTION_ALL });
     hammer.on("swipeleft", (eventObject) => {
-      this.moveTiles({key : this.LEFT_MOVEMENT_EVENT});
+      this.moveTiles({key : LEFT_MOVEMENT_EVENT});
     });
     hammer.on("swiperight", (eventObject) => {
-      this.moveTiles({key : this.RIGHT_MOVEMENT_EVENT});
+      this.moveTiles({key : RIGHT_MOVEMENT_EVENT});
     });
     hammer.on("swipeup", (eventObject) => {
-      this.moveTiles({key : this.UP_MOVEMENT_EVENT});
+      this.moveTiles({key : UP_MOVEMENT_EVENT});
     });
     hammer.on("swipedown", (eventObject) => {
-      this.moveTiles({key : this.DOWN_MOVEMENT_EVENT});
+      this.moveTiles({key : DOWN_MOVEMENT_EVENT});
     });
   }
 
@@ -81,9 +72,7 @@ export class GridComponent implements OnInit {
     const emptyCells = this.getEmptyCells();
     if (numOfTiles == 1) {
       this.addTileAt(emptyCells[Math.floor(Math.random() * emptyCells.length)]);
-    } else if (numOfTiles >= emptyCells.length) {
-      throw new Error("Cannot create new tiles - not enough space in grid.");
-    } else {
+    } else if (numOfTiles < emptyCells.length) {
       const takenPositions: Cell[] = [];
       while (takenPositions.length < numOfTiles) {
         const proposedPosition = Math.floor(Math.random() * emptyCells.length);
@@ -96,30 +85,29 @@ export class GridComponent implements OnInit {
   }
 
   private addTileAt(position: Cell) {
-    this.cells[position.y][position.x].value = this.INITIAL_TILE_VALUE;
+    this.cells[position.y][position.x].value = this.gameState == 3 ? (Math.round(Math.random()) + 1) : INITIAL_TILE_VALUE;
     this.cells[position.y][position.x].state = "new";
   }
-
 
   @HostListener("window:keydown", ['$event'])
   moveTiles(event: any) {
     const prevState = this.cells;
     let newState: Cell[][] = null;
     switch (event.key) {
-      case this.LEFT_MOVEMENT_EVENT:
-        this.lastMove = this.LEFT;
+      case LEFT_MOVEMENT_EVENT:
+        this.lastMove = LEFT;
         newState = this.cells.map(row => this.moveRowLeft(row));
         break;
-      case this.RIGHT_MOVEMENT_EVENT:
-        this.lastMove = this.RIGHT;
+      case RIGHT_MOVEMENT_EVENT:
+        this.lastMove = RIGHT;
         newState = this.cells.map(row => this.moveRowRight(row));
         break;
-      case this.UP_MOVEMENT_EVENT:
-        this.lastMove = this.UP;
+      case UP_MOVEMENT_EVENT:
+        this.lastMove = UP;
         newState = this.moveColumnsUp();
         break;
-      case this.DOWN_MOVEMENT_EVENT:
-        this.lastMove = this.DOWN;
+      case DOWN_MOVEMENT_EVENT:
+        this.lastMove = DOWN;
         newState = this.moveColumnsDown();
         break;
     }
@@ -128,20 +116,25 @@ export class GridComponent implements OnInit {
       const newStateVals = newState.map(row => row.map(cell => cell.value));
       if (JSON.stringify(oldStateVals) !== JSON.stringify(newStateVals)) {
         this.cells = newState;
-        this.addRandomTiles(this.NEW_TILES_PER_ROUND);
+        this.addRandomTiles(NEW_TILES_PER_ROUND);
       }
       if (!this.getEmptyCells().length && !this.matchesAvailable()){
-        this.gameOver = true;
+        this.gameState = GAME_OVER;
       }
     }
   }
 
-  private moveRowLeft(row: Cell[]) {
+  private getCondensedRowFromRow(row : Cell[]){
     const condensedRow: Cell[] = JSON.parse(JSON.stringify(row));
     for (let i = 0; i < condensedRow.length; i++) {
       condensedRow[i].value = 0;
       condensedRow[i].state = "empty";
     }
+    return condensedRow;
+  }
+
+  private moveRowLeft(row: Cell[]) {
+    const condensedRow: Cell[] = this.getCondensedRowFromRow(row);
     let condensedRowIndex = 0;
     for (let i = 0; i < row.length; i++) {
       let cellValue : number = row[i].value;
@@ -151,8 +144,7 @@ export class GridComponent implements OnInit {
           j++;
         }
         if ((i + j < row.length) && (row[i + j].value == cellValue)) {
-          condensedRow[condensedRowIndex].value = GridComponent.getNextFibonacci(cellValue);
-          condensedRow[condensedRowIndex].state = 'merged';
+          this.mergeTiles(condensedRow, condensedRowIndex, cellValue);
           i = i + j;
         } else {
           condensedRow[condensedRowIndex].value = cellValue;
@@ -168,14 +160,7 @@ export class GridComponent implements OnInit {
   }
 
   private moveRowRight(row: Cell[]) {
-    const condensedRow: Cell[] = JSON.parse(JSON.stringify(row));
-    for (let i = 0; i < condensedRow.length; i++) {
-      condensedRow[i].value = 0;
-      condensedRow[i].state = "empty";
-    }
-    condensedRow.map(cell=> {
-      cell.value = 0; cell.state = "empty";
-    });
+    const condensedRow: Cell[] = this.getCondensedRowFromRow(row);
     let condensedRowIndex = row.length-1;
     for (let i = row.length-1; i > -1; i--) {
       let cellValue : number = row[i].value;
@@ -185,8 +170,7 @@ export class GridComponent implements OnInit {
           j++;
         }
         if ((i - j > -1) && (row[i - j].value == cellValue)) {
-          condensedRow[condensedRowIndex].value = GridComponent.getNextFibonacci(cellValue);
-          condensedRow[condensedRowIndex].state = 'merged';
+          this.mergeTiles(condensedRow, condensedRowIndex, cellValue);
           i = i - j;
         } else {
           condensedRow[condensedRowIndex].value = cellValue;
@@ -195,6 +179,15 @@ export class GridComponent implements OnInit {
       }
     }
     return condensedRow;
+  }
+
+  private mergeTiles(condensedRow: Cell[], condensedRowIndex: number, cellValue: number) {
+    condensedRow[condensedRowIndex].value = GridComponent.getNextFibonacci(cellValue);
+    condensedRow[condensedRowIndex].state = 'merged';
+    if (condensedRow[condensedRowIndex].value == WINNER_TILE_VALUE) {
+      this.gameState = 2;
+    }
+    this.score += condensedRow[condensedRowIndex].value;
   }
 
   private moveColumnsUp() {
@@ -229,7 +222,7 @@ export class GridComponent implements OnInit {
         tile = this.cells[row][col];
         if (tile.value) {
           for (let dir = 0; dir < 4; dir++) {
-            const vector = this.DIR_VECTORS[dir];
+            const vector = DIR_VECTORS[dir];
             if(tile.x + vector.x >= n || tile.y + vector.y >=n || tile.x +vector.x < 0 || tile.y + vector.y < 0){
               continue;
             }
@@ -281,6 +274,17 @@ export class GridComponent implements OnInit {
     return true;
 
   }
+
+  onGamePaused(value: string) {
+    switch (value) {
+      case "New Game":
+        this.initGrid();
+        break;
+      case "Keep Going":
+        this.gameState = 3;
+        break;
+    }
+  }
 }
 
 interface Cell {
@@ -289,3 +293,18 @@ interface Cell {
   value : number;
   state : string;
 }
+
+//Constants
+const INITIAL_TILE_VALUE : number = 1;
+const WINNER_TILE_VALUE : number = 144;
+const GAME_OVER = 1;
+const NEW_TILES_PER_ROUND = 1;
+const LEFT : string = "Left";
+const LEFT_MOVEMENT_EVENT = "ArrowLeft";
+const RIGHT : string = "Right";
+const RIGHT_MOVEMENT_EVENT = "ArrowRight";
+const UP : string = "Up";
+const UP_MOVEMENT_EVENT = "ArrowUp";
+const DOWN : string = "Down";
+const DOWN_MOVEMENT_EVENT = "ArrowDown";
+const DIR_VECTORS = [{x: 1, y: 0}, {x: 0, y: 1}, {x: -1, y: 0}, {x: 0, y: -1}];

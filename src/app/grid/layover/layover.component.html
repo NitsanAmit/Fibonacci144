@@ -1,0 +1,8 @@
+<div *ngIf="state==1">
+  <p>Game Over :-(</p>
+  <button class="btn-game-over" (click)="this.newGame()">New Game</button>
+</div>
+<div *ngIf="state==2">
+  <p >You Won! :-)</p>
+  <button class="btn-layover" (click)="this.keepGoing()">Keep Going</button>
+</div>

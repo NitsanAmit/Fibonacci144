@@ -4,14 +4,14 @@ import { FormsModule } from '@angular/forms';
 import { AppComponent } from './app.component';
 import { GridComponent } from './grid/grid.component';
 import { CellComponent } from './grid/cell/cell.component';
-import { GameOverComponent } from './grid/game-over/game-over.component';
+import { LayoverComponent } from './grid/layover/layover.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     GridComponent,
     CellComponent,
-    GameOverComponent,
+    LayoverComponent,
   ],
   imports: [
     BrowserModule,
